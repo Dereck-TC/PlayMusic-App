@@ -1,0 +1,183 @@
+doctype html
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        meta(http-equiv="X-UA-Compatible", content="IE=edge")
+        meta(name="viewport", content="width=device-width, initial-scale=1.0")
+        link(rel="stylesheet", href="/css/index2.css")
+        link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css")
+        link(rel="stylesheet", href="https:////fonts.googleapis.com/css?family=Roboto+Condensed:700")
+        title Document
+    body 
+        //- app root container
+        #app.app-wrap(v-cloak='')
+            //- app player container
+            main.player-wrap.fx.fx-fade-in(ref='playerWrap', style='opacity: 0')
+                //- bg absolute elements
+                figure.player-bg(ref='playerBg')
+                canvas.player-canvas(ref='playerCanvas')
+                //- main player layout
+                section.player-layout
+                    //- player top header
+                    header.player-header.flex-row.flex-middle.flex-stretch
+                        h2.text-clip.flex-1
+                            i.fa.fa-headphones
+                            |  
+                            span Soma FM Player
+                        button.text-nowrap.common-btn(@click='toggleSidebar( true )')
+                            i.fa.fa-bars
+                    //- player middle content area
+                    main.player-content.flex-row
+                        //- default greet message
+                        section.player-greet(v-if='!hasChannel && !hasErrors')
+                            .fx.fx-slide-left.push-bottom
+                                h1 Pick a Station
+                            .fx.fx-slide-left.fx-delay-1.push-bottom
+                                | This is a music streaming player for the channels provided by SomaFM.com. Just pick a station from the sidebar to the right to start listening.
+                            .fx.fx-slide-up.fx-delay-2.pad-top
+                                button.cta-btn(@click='toggleSidebar( true )')
+                                    i.fa.fa-headphones &nbsp;
+                                    |  View Stations
+                        //- show selected channel info if possible
+                        section.player-channel.flex-1(v-if='hasChannel && !hasErrors', :key='channel.id')
+                            .flex-autorow.flex-middle.flex-stretch
+                                //- station details
+                                .flex-item.flex-1
+                                    //- station
+                                    .push-bottom.pad-bottom.border-bottom
+                                        .flex-row.flex-middle
+                                            img.img-round.fx.fx-drop-in.fx-delay-1(:src='channel.largeimage', width='80', height='80', :alt='channel.title')
+                                            .pad-left.fx.fx-slide-left.fx-delay-2
+                                                .text-clip.text-uppercase {{ channel.genre | toSpaces }}
+                                                h2.text-clip {{ channel.title }}
+                                    //- description
+                                    .push-bottom.pad-bottom.border-bottom.fx.fx-slide-up.fx-delay-3
+                                        | {{ channel.description }}
+                                    //- current track
+                                    .push-bottom.pad-bottom.border-bottom.fx.fx-slide-up.fx-delay-4(:key='track.date')
+                                        div
+                                            span.text-faded DJ:
+                                            |  
+                                            span.text-default {{ channel.dj | toText( &apos;N/A&apos; ) }}
+                                        div
+                                            span.text-faded Playing:
+                                            |  
+                                            span.text-secondary {{ track.title | toText( &apos;N/A&apos; ) }}
+                                        div
+                                            span.text-faded From:
+                                            |  
+                                            span.text-bright {{ track.album | toText( &apos;N/A&apos; ) }}
+                                        div
+                                            span.text-faded By:
+                                            |  
+                                            span.text-default {{ track.artist | toText( &apos;N/A&apos; ) }}
+                                    //- buttons
+                                    .push-bottom
+                                        a.cta-btn.text-nowrap.fx.fx-slide-up.fx-delay-5(:href='channel.twitter', title='Open link', target='_blank')
+                                            i.fa.fa-twitter
+                                            |  Twitter
+                                            |  &nbsp;
+                                        a.cta-btn.text-nowrap.fx.fx-slide-up.fx-delay-6(:href='channel.infourl', title='Channel page', target='_blank')
+                                            span.fx.fx-notx.fx-ibk.fx-drop-in.fx-delay-1(:key='channel.listeners')
+                                                i.fa.fa-headphones
+                                                |  {{ channel.listeners | toCommas( 0 ) }}
+                                            |  &nbsp;
+                                        a.cta-btn.text-nowrap.fx.fx-slide-up.fx-delay-7(:href='channel.plsfile', title='Download PLS', target='_blank')
+                                            i.fa.fa-download
+                                //- songs list
+                                .flex-item.flex-1
+                                    .push-bottom
+                                        h5.fx.fx-slide-left.fx-delay-1 Recent Tracks
+                                    .card.push-bottom(v-if='!hasSongs')
+                                        | There are no songs loaded yet for this station.
+                                    ul.player-tracklist.push-bottom(v-if='hasSongs')
+                                        li.card.fx(v-for='( s, i ) of songsList', :key='s.date', :class="'fx-slide-left fx-delay-' + ( i + 2 )")
+                                            div
+                                                span.text-secondary {{ s.title | toText( &apos;N/A&apos; ) }}
+                                            div
+                                                span.text-faded From:
+                                                |  
+                                                span.text-bright {{ s.album | toText( &apos;N/A&apos; ) }}
+                                            div
+                                                span.text-faded By:
+                                                |  
+                                                span.text-default {{ s.artist | toText( &apos;N/A&apos; ) }}
+                        //- show tracks for selected channel if possible
+                        section.player-errors.flex-1.text-center(v-if='hasErrors', key='errors')
+                            .push-bottom.fx.fx-drop-in.fx-delay-1
+                                i.fa.fa-plug.text-huge.text-faded
+                            .push-bottom.fx.fx-slide-up.fx-delay-2
+                                h3 Oops, there&apos;s a problem!
+                            hr
+                            .text-primary.push-bottom.fx.fx-slide-up.fx-delay-3(v-if='errors.init', v-text='errors.init')
+                            .text-primary.push-bottom.fx.fx-slide-up.fx-delay-4(v-if='errors.stream', v-text='errors.stream')
+                            hr
+                            button.cta-btn.text-nowrap.fx.fx-slide-up.fx-delay-5(@click='tryAgain')
+                                i.fa.fa-refresh
+                                |  Try again
+                    //- player footer with controls
+                    footer.player-footer.flex-row.flex-middle.flex-space
+                        //- player controls
+                        section.player-controls.flex-row.flex-middle.push-right(:class="{ 'disabled': !canPlay }")
+                            button.common-btn(@click='togglePlay()')
+                                i.fa.fa-stop.fx.fx-drop-in(v-if='playing', key='stop')
+                                i.fa.fa-play.fx.fx-drop-in(v-else='', key='play')
+                            .form-slider.push-left
+                                i.fa.fa-volume-down
+                                input.common-slider(type='range', min='0.0', max='1.0', step='0.1', value='0.5', v-model='volume')
+                                i.fa.fa-volume-up
+                            .text-clip.push-left
+                                span {{ timeDisplay }}
+                                span.fx.fx-fade-in.fx-delay-1(v-if='hasChannel', :key='channel.id') &nbsp;|&nbsp;{{ channel.title }}
+                        //- player links
+                        section.player-links.text-nowrap
+                            a.common-btn.text-faded(href='https://github.com/rainner/soma-fm-player', title='View on Github', target='_blank')
+                                i.fa.fa-github
+                            | &nbsp;
+                            a.common-btn.text-faded(href='https://codepen.io/rainner', title='Codepen Projects', target='_blank')
+                                i.fa.fa-codepen
+                //- layout wrapper
+                //- player stations overlay + sidebar
+                section.player-stations(:class="{ 'visible': sidebar }", @click='toggleSidebar( false )')
+                    aside.player-stations-sidebar(@click.stop='')
+                        //-- sidebar search
+                        header.player-stations-header.flex-row.flex-middle.flex-stretch
+                            .form-input.push-right
+                                i.fa.fa-search
+                                input(type='text', placeholder='Search station...', v-model='searchText')
+                            button.common-btn(@click='toggleSidebar( false )')
+                                i.fa.fa-times-circle
+                        //-- sidebar stations list
+                        ul.player-stations-list
+                            li.player-stations-list-item.flex-row.flex-top.flex-stretch(v-for='c of channelsList', :key='c.id', @click='selectChannel( c )', :class="{ 'active': c.active }")
+                                figure.push-right.if-small
+                                    img.img-round(width='70', height='70', :src='c.largeimage', :alt='c.title')
+                                aside.flex-1
+                                    .flex-row.flex-middle.flex-space
+                                        h6.text-bright.text-clip {{ c.title }}
+                                        .text-secondary
+                                            i.fa.fa-headphones
+                                            |  {{ c.listeners | toCommas( 0 ) }}
+                                    .text-small
+                                        span.text-faded.text-uppercase.text-small {{ c.genre | toSpaces }}
+                                        |  
+                                        br
+                                                //- {{ c.description }}
+                        //-- sidebar sort options
+                        footer.player-stations-footer.flex-row.flex-middle.flex-stretch
+                            .flex-1.push-right
+                                span.fa.clickable(@click='toggleSortOrder()', :class="{ 'fa-sort-amount-desc': sortOrder === 'desc', 'fa-sort-amount-asc': sortOrder === 'asc' }") &nbsp;
+                                span.text-faded Sort: &nbsp;
+                                span.text-secondary.popover
+                                    span.clickable {{ sortLabel }}
+                                    span.popover-box.popover-top
+                                        button(@click="sortBy( 'title', 'asc' )") Station Name
+                                        button(@click="sortBy( 'listeners', 'desc' )") Listeners Count
+                                        button(@click="sortBy( 'genre', 'asc' )") Music Genre
+                            div &nbsp;
+        //- // player
+        //- // wrapper
+        script(src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.17/vue.min.js")
+        script(src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js")
+        script(src="https://cdnjs.cloudflare.com/ajax/libs/three.js/96/three.min.js")
+        script(src="/js/index.js")

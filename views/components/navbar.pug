@@ -1,0 +1,24 @@
+nav(class="bg-gray-900")
+    ul(class="flex text-white p-5 gap-5")
+        li 
+            a(href="/") Home 
+        li 
+            a(href="/") Link 
+        if user 
+            li 
+                a(href="/playlists") Playlists
+            li 
+                a(href="/songs") Songs
+            li 
+                div(class="relative group")
+                    p #{user.name}
+                    div(class="absolute pt-3 hidden group-hover:block w-max")
+                        a(href="/auth/logout" class="bg-red-300 p-2") Cerrar sesión
+        else
+            li 
+                a(href="/auth/login") Login 
+            li 
+                a(href="/auth/signup") Sign up 
+
+if username = "Dereck"
+    p ADMIN
